@@ -17,3 +17,11 @@ def relu(x):
 
 def relu_derivative(x):
     return (x > 0).astype(float)
+
+def softmax(x):
+    exp_shifted = np.exp(x - np.max(x, axis=-1, keepdims=True))
+    return exp_shifted / np.sum(exp_shifted, axis=-1, keepdims=True)
+
+def softmax_derivative(x):
+    s = softmax(x).reshape(-1, 1)
+    return np.diagflat(s) - np.dot(s, s.T)
