@@ -1,5 +1,6 @@
 # Import core modules for easy access
 from .nn import *
-from .ActivationFunctions import *
-from .LossFunctions import *
+from .Activation import *
+from .Loss import *
 from .Optimizer import *
+from .Layer import *

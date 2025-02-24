@@ -1,54 +1,57 @@
 import numpy as np
-from .ActivationFunctions import sigmoid, tanh, relu  # Import activation functions
+from .Layer import Layer
+from .Activation import sigmoid, tanh, relu 
 
-class InputLayer:
-    """Passes input data without modification."""
-    def __init__(self, input_shape):
-        self.input_shape = input_shape  # e.g., (batch_size, input_dim)
-        self.output_shape = input_shape
+class InputLayer(Layer):
+    def __init__(self, dataIn):
+        super().__init__()
+        self.meanX = np.mean(dataIn, axis=0, keepdims=True)
+        self.stdX = np.std(dataIn, axis=0, keepdims=True, ddof=1)
+        # For numeric stability
+        self.stdX[self.stdX == 0] = 1
 
-    def forward(self, inputs):
-        self.output = inputs
-        return self.output
+    def forward(self, dataIn):
+        zscore_data = (dataIn - self.meanX) / self.stdX
+        self.setPrevIn(dataIn)
+        self.setPrevOut(zscore_data)
+        return zscore_data
 
-class FullyConnectedLayer:
-    """Dense/fully connected layer with activation."""
-    def __init__(self, input_dim, output_dim, activation='sigmoid'):
-        self.weights = np.random.randn(output_dim, input_dim) * 0.01  # Xavier initialization
-        self.biases = np.zeros((output_dim, 1))
-        self.activation = activation
 
-    def forward(self, inputs):
-        self.inputs = inputs
-        # Compute pre-activation
-        self.z = np.dot(self.weights, self.inputs.T).T + self.biases.T
-        # Apply activation
-        if self.activation == 'sigmoid':
-            self.output = sigmoid(self.z)
-        elif self.activation == 'tanh':
-            self.output = tanh(self.z)
-        elif self.activation == 'relu':
-            self.output = relu(self.z)
-        else:
-            self.output = self.z  # Linear activation
-        return self.output
+class FullyConnectedLayer(Layer):
+    def __init__(self, sizeIn, sizeOut):
+        super().__init__()
+        self.W = np.random.uniform(-1e-4, 1e-4, (sizeIn, sizeOut))
+        self.b = np.random.uniform(-1e-4, 1e-4, (1, sizeOut))
 
-    def backward(self, grad_output, learning_rate):
-        # Compute gradients (to be used during LSTM backprop)
-        if self.activation == 'sigmoid':
-            grad_activation = self.output * (1 - self.output)
-        elif self.activation == 'tanh':
-            grad_activation = 1 - self.output**2
-        elif self.activation == 'relu':
-            grad_activation = (self.output > 0).astype(float)
-        else:
-            grad_activation = 1  # Linear
+    def getWeights(self):
+        return self.W
 
-        self.grad_weights = np.dot(grad_output.T, self.inputs)
-        self.grad_biases = np.sum(grad_output, axis=0, keepdims=True).T
-        grad_input = np.dot(grad_output, self.weights)
-        
-        # Update parameters
-        self.weights -= learning_rate * self.grad_weights
-        self.biases -= learning_rate * self.grad_biases
-        return grad_input * grad_activation
+    def setWeights(self, W):
+        self.W = W
+
+    def getBiases(self):
+        return self.b
+
+    def setBiases(self, b):
+        self.b = b
+
+    def forward(self, dataIn):
+
+        self.setPrevIn(dataIn)
+        result = np.dot(dataIn, self.W) + self.b
+        self.setPrevOut(result)
+        return result
+
+    def gradient(self):
+        return np.tile(self.W.T, (self.getPrevIn().shape[0], 1, 1))
+    
+    def backward(self, gradIn):
+        return np.dot(gradIn, self.W.T)
+    
+    def updateWeights(self,gradIn, eta):
+
+        dJdb = np.sum(gradIn, axis = 0)/gradIn.shape[0]
+        dJdW = (self.getPrevIn().T @ gradIn)/gradIn.shape[0]
+
+        self.W -= eta*dJdW 
+        self.b -= eta*dJdb

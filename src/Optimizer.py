@@ -1,45 +1,50 @@
 import numpy as np
 
-class AdamOptimizer:
-    """Adam optimizer implementation."""
-    def __init__(self, layers, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8):
-        self.layers = layers  # List of network layers (e.g., [FullyConnectedLayer])
-        self.lr = learning_rate
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.epsilon = epsilon
-        self.t = 0  # Timestep
-        
-        # Initialize moment estimates for weights/biases in all layers
-        self.m_weights = [np.zeros_like(layer.weights) for layer in layers if hasattr(layer, 'weights')]
-        self.v_weights = [np.zeros_like(layer.weights) for layer in layers if hasattr(layer, 'weights')]
-        self.m_biases = [np.zeros_like(layer.biases) for layer in layers if hasattr(layer, 'biases')]
-        self.v_biases = [np.zeros_like(layer.biases) for layer in layers if hasattr(layer, 'biases')]
-
-    def step(self):
-        """Update parameters using Adam."""
-        self.t += 1
-        layer_idx = 0
-        
-        for layer in self.layers:
-            if hasattr(layer, 'weights') and hasattr(layer, 'grad_weights'):
-                # Update weights
-                self.m_weights[layer_idx] = self.beta1 * self.m_weights[layer_idx] + (1 - self.beta1) * layer.grad_weights
-                self.v_weights[layer_idx] = self.beta2 * self.v_weights[layer_idx] + (1 - self.beta2) * (layer.grad_weights ** 2)
-                
-                # Bias correction
-                m_hat_w = self.m_weights[layer_idx] / (1 - self.beta1 ** self.t)
-                v_hat_w = self.v_weights[layer_idx] / (1 - self.beta2 ** self.t)
-                
-                layer.weights -= self.lr * m_hat_w / (np.sqrt(v_hat_w) + self.epsilon)
-
-                # Update biases
-                self.m_biases[layer_idx] = self.beta1 * self.m_biases[layer_idx] + (1 - self.beta1) * layer.grad_biases
-                self.v_biases[layer_idx] = self.beta2 * self.v_biases[layer_idx] + (1 - self.beta2) * (layer.grad_biases ** 2)
-                
-                m_hat_b = self.m_biases[layer_idx] / (1 - self.beta1 ** self.t)
-                v_hat_b = self.v_biases[layer_idx] / (1 - self.beta2 ** self.t)
-                
-                layer.biases -= self.lr * m_hat_b / (np.sqrt(v_hat_b) + self.epsilon)
-                
-                layer_idx += 1
+def adam_optimize_objective(objectiveFunction, objectiveGrad, x, w_init, lr=5, epochs=100, rho1=0.9, rho2=0.999, delta=1e-8):
+    """
+    Adam optimizer for a scalar objective function.
+    
+    Parameters:
+      objectiveFunction : Function that takes (x, w) and returns the scalar objective J.
+      objectiveGrad     : Function that takes (x, w) and returns the gradient dJ/dw.
+      x                 : The input value (for example, x = 1).
+      w_init            : Initial value for the parameter w.
+      lr                : Learning rate.
+      epochs            : Number of epochs (iterations).
+      rho1              : Exponential decay rate for the first moment estimate (beta1).
+      rho2              : Exponential decay rate for the second moment estimate (beta2).
+      delta             : A small constant for numerical stability (epsilon).
+      
+    Returns:
+      w         : Optimized parameter.
+      JValues   : List of objective function values at each epoch.
+    """
+    w = w_init
+    s = 0.0
+    r = 0.0
+    JValues = []
+    
+    for t in range(1, epochs + 1):
+        try:
+            J = objectiveFunction(x, w)
+            JValues.append(J)
+            grad = objectiveGrad(x, w)
+            
+            # Update biased first moment estimate.
+            s = rho1 * s + (1 - rho1) * grad
+            # Update biased second moment estimate.
+            r = rho2 * r + (1 - rho2) * (grad ** 2)
+            
+            # Compute bias-corrected first moment estimate.
+            s_hat = s / (1 - rho1 ** t)
+            # Compute bias-corrected second moment estimate.
+            r_hat = r / (1 - rho2 ** t)
+            
+            # Update parameter.
+            w = w - lr * (s_hat / (np.sqrt(r_hat) + delta))
+            
+        except OverflowError:
+            print(f"Overflow encountered at epoch {t}. Stopping early.")
+            break
+    
+    return w, JValues
