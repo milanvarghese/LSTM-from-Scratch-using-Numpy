@@ -16,7 +16,9 @@ print(poem_text)
 # -----------------------------
 # 2. Build Character-Level Vocabulary
 # -----------------------------
-chars = sorted(list(set(poem_text)))
+s = set(poem_text)
+s.add('R')
+chars = sorted(list(s))
 vocab_size = len(chars)
 print("Vocabulary size:", vocab_size)
 
@@ -61,6 +63,14 @@ for i in range(0, len(poem_text) - sequence_length):
 input_sequences = np.array(input_sequences)
 target_sequences = np.array(target_sequences)
 
+print("before batching: ",input_sequences.shape)
+batch_size = 13
+input_sequences = input_sequences.reshape(int(len(input_sequences)/batch_size),batch_size , 25)
+target_sequences = input_sequences.reshape(int(len(target_sequences)/batch_size),batch_size , 25)
+print("after batching: ",input_sequences.shape)
+
+
+
 # -----------------------------
 # 6. Training Loop with BPTT
 # -----------------------------
@@ -68,6 +78,7 @@ print("\nStarting training...\n")
 for epoch in range(epochs):
     total_loss = 0
     # Process each training sequence one by one.
+    
     for seq_idx in range(len(input_sequences)):
         input_indices = input_sequences[seq_idx]
         target_indices = target_sequences[seq_idx]
