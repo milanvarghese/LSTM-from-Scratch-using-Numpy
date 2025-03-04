@@ -10,28 +10,29 @@ from src.Loss import CrossEntropy  # Loss functions
 data_file_path = os.path.join("data", "data.txt")
 with open(data_file_path, "r") as file:
     poem_text = file.read()
-print("Loaded Poem Dataset:")
-print(poem_text)
+
 
 # -----------------------------
 # 2. Build Character-Level Vocabulary
 # -----------------------------
-s = set(poem_text)
-s.add('R')
-chars = sorted(list(s))
-vocab_size = len(chars)
+# words = poem_text.split(" ")
+# s = set(words)
+# # s.add('R')
+# chars = sorted(list(s))
+# vocab_size = len(chars)
 print("Vocabulary size:", vocab_size)
 
 char_to_idx = {ch: i for i, ch in enumerate(chars)}
 idx_to_char = {i: ch for i, ch in enumerate(chars)}
 
+
 # -----------------------------
 # 3. Hyperparameters and Model Setup
 # -----------------------------
-sequence_length = 25  # Length of input sequences
-hidden_dim = 128      # Size of LSTM hidden state
-learning_rate = 0.01
-epochs = 10
+sequence_length = 50  # Length of input sequences
+hidden_dim = 64      # Size of LSTM hidden state
+learning_rate = 0.9
+epochs = 100
 
 input_dim = vocab_size  # One-hot vector size equals vocab size
 
@@ -54,6 +55,7 @@ def one_hot(index, dim):
 # -----------------------------
 input_sequences = []
 target_sequences = []
+poem_text = words
 for i in range(0, len(poem_text) - sequence_length):
     input_seq = poem_text[i:i+sequence_length]
     target_seq = poem_text[i+1:i+sequence_length+1]
@@ -63,11 +65,11 @@ for i in range(0, len(poem_text) - sequence_length):
 input_sequences = np.array(input_sequences)
 target_sequences = np.array(target_sequences)
 
-print("before batching: ",input_sequences.shape)
-batch_size = 13
-input_sequences = input_sequences.reshape(int(len(input_sequences)/batch_size),batch_size , 25)
-target_sequences = input_sequences.reshape(int(len(target_sequences)/batch_size),batch_size , 25)
-print("after batching: ",input_sequences.shape)
+# print("before batching: ",input_sequences.shape)
+# batch_size = 13
+# input_sequences = input_sequences.reshape(int(len(input_sequences)/batch_size),batch_size , 25)
+# target_sequences = input_sequences.reshape(int(len(target_sequences)/batch_size),batch_size , 25)
+# print("after batching: ",input_sequences.shape)
 
 
 
@@ -82,6 +84,7 @@ for epoch in range(epochs):
     for seq_idx in range(len(input_sequences)):
         input_indices = input_sequences[seq_idx]
         target_indices = target_sequences[seq_idx]
+       
 
         # Initialize hidden and cell states
         h_state = np.zeros((hidden_dim, 1))
@@ -94,6 +97,8 @@ for epoch in range(epochs):
 
         # ----- Forward Pass -----
         for t in range(sequence_length):
+            # print(f"input_indices[t]: {input_indices[t]}")
+            # exit()
             x_t = one_hot(input_indices[t], vocab_size)
             h_state, c_state = lstm.forward(x_t, h_state, c_state)
             # Store a copy of hidden state and cache for time step t.
@@ -164,6 +169,7 @@ for epoch in range(epochs):
 # 7. Text Generation Function
 # -----------------------------
 def generate_text(seed_text, length=100):
+    seed_text = seed_text.split(" ")
     generated_text = seed_text
     h_state = np.zeros((hidden_dim, 1))
     c_state = np.zeros((hidden_dim, 1))
@@ -183,13 +189,14 @@ def generate_text(seed_text, length=100):
         next_idx = np.random.choice(range(vocab_size), p=probs.ravel())
         next_char = idx_to_char[next_idx]
         generated_text += next_char
+        generated_text += " "
         current_char = next_char
     return generated_text
 
 # -----------------------------
 # 8. Generate and Print Text
 # -----------------------------
-seed = "Roses are red,\n"
+seed = "the real life? Is this"
 generated = generate_text(seed, length=200)
 print("\nGenerated Text:\n")
-print(generated)
+print("".join(generated))
