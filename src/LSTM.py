@@ -173,3 +173,7 @@ class LSTMLayer(Layer):
         d_prev_cell_state = d_total_cell_state * forget_gate
         
         return d_prev_hidden_state, d_input, d_prev_cell_state
+
+
+
+
